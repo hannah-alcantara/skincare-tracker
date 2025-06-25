@@ -10,9 +10,17 @@ import {
   NavigationMenuTrigger,
   NavigationMenuViewport,
 } from "@/components/ui/navigation-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-import { Home, Package, Calendar, Plus } from "lucide-react";
+import { Home, Package, Calendar, Plus, AlignJustify } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "./ui/button";
@@ -34,54 +42,106 @@ export const MainNav = () => {
   const pathname = usePathname();
 
   return (
-    <NavigationMenu className='flex h-16'>
-      <div className='flex justify-between container mx-auto px-4 bg-blue-400 border-b'>
-        <NavigationMenuList className='flex items-center space-x-8'>
-          {/* Name */}
-          <NavigationMenuItem>
-            <NavigationMenuLink asChild>
-              <Link href='/products'>
-                <Calendar className='h-6 w-6' />
-                <span className='font-bold text-xl'>Skincare Tracker</span>
-              </Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
+    <div>
+      <NavigationMenu className='border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
+        <div className='container mx-auto px-4'>
+          {/* Mobile Na */}
+          {/* <Sheet>
+            <SheetTrigger>
+              <AlignJustify className='h-4 w-4 md:hidden' />
+            </SheetTrigger>
+            <SheetContent side='left'>
+              <SheetHeader>
+                <div className='flex flex-col gap-4'>
+                  <div>
+                    <Link
+                      href='/products'
+                      className='flex flex-row items-center space-x-6'
+                    >
+                      <Calendar className='h-6 w-6' />
+                      <span className='font-bold text-xl'>
+                        Skincare Tracker
+                      </span>
+                    </Link>
+                  </div>
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.href}
+                        className='flex items-center space-x-6'
+                      >
+                        <Icon className='h-4 w-4' />
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-primary",
+                            pathname === item.href
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {item.label}
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SheetHeader>
+            </SheetContent>
+          </Sheet> */}
 
-          {/* Menus */}
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavigationMenuItem
-                key={item.href}
-                className='flex items-center space-x-6'
-              >
-                <Icon className='h-4 w-4' />
+          {/* Desktop Nav */}
+          <NavigationMenuList className='hidden md:flex h-16 items-center justify-between'>
+            <div className='flex items-center space-x-8'>
+              <NavigationMenuItem>
                 <NavigationMenuLink
-                  href={item.href}
-                  className={cn(
-                    "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-primary",
-                    pathname === item.href
-                      ? "text-primary"
-                      : "text-muted-foreground"
-                  )}
+                  className='	hover:bg-transparent focus:bg-transparent'
+                  asChild
                 >
-                  {item.label}
+                  <Link href='/' className='flex items-center space-x-2'>
+                    <Calendar className='h-6 w-6' />
+                    <span className='font-bold text-xl'>Skincare Tracker</span>
+                  </Link>
                 </NavigationMenuLink>
               </NavigationMenuItem>
-            );
-          })}
 
-          {/* Button */}
-          <NavigationMenuItem>
-            <Button asChild>
-              <Link href='/'>
-                <Plus className='h-4 w-4 mr-1' />
-                Add Product
-              </Link>
-            </Button>
-          </NavigationMenuItem>
-        </NavigationMenuList>
-      </div>
-    </NavigationMenu>
+              <NavigationMenuItem className='flex items-center space-x-6'>
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavigationMenuLink asChild key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-primary",
+                          pathname === item.href
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        <Icon className='h-4 w-4' />
+                        <span>{item.label}</span>
+                      </Link>
+                    </NavigationMenuLink>
+                  );
+                })}
+              </NavigationMenuItem>
+            </div>
+
+            <NavigationMenuItem>
+              <NavigationMenuLink>
+                <Button asChild>
+                  <Link href='/products/add'>
+                    <Plus className='h-4 w-4 mr-2' />
+                    Add Product
+                  </Link>
+                </Button>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </div>
+      </NavigationMenu>
+    </div>
   );
 };

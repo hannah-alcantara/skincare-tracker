@@ -45,54 +45,68 @@ export const MainNav = () => {
     <div>
       <NavigationMenu className='border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
         <div className='container mx-auto px-4'>
-          {/* Mobile Na */}
-          {/* <Sheet>
-            <SheetTrigger>
-              <AlignJustify className='h-4 w-4 md:hidden' />
-            </SheetTrigger>
-            <SheetContent side='left'>
-              <SheetHeader>
-                <div className='flex flex-col gap-4'>
-                  <div>
-                    <Link
-                      href='/products'
-                      className='flex flex-row items-center space-x-6'
-                    >
-                      <Calendar className='h-6 w-6' />
-                      <span className='font-bold text-xl'>
-                        Skincare Tracker
-                      </span>
-                    </Link>
-                  </div>
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.href}
-                        className='flex items-center space-x-6'
+          {/* Mobile Nav */}
+          <div className='flex justify-between items-center md:hidden h-16'>
+            <Sheet>
+              <SheetTrigger>
+                <AlignJustify className='h-4 w-4 md:hidden' />
+              </SheetTrigger>
+              <SheetContent side='left'>
+                <SheetHeader>
+                  <div className='flex flex-col gap-4'>
+                    <div>
+                      <Link
+                        href='/products'
+                        className='flex flex-row items-center space-x-6'
                       >
-                        <Icon className='h-4 w-4' />
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-primary",
-                            pathname === item.href
-                              ? "text-primary"
-                              : "text-muted-foreground"
-                          )}
+                        <Calendar className='h-6 w-6' />
+                        <span className='font-bold text-xl'>
+                          Skincare Tracker
+                        </span>
+                      </Link>
+                    </div>
+                    {navItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.href}
+                          className='flex items-center space-x-6'
                         >
-                          {item.label}
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
-              </SheetHeader>
-            </SheetContent>
-          </Sheet> */}
+                          <Icon className='h-4 w-4' />
+                          <Link
+                            href={item.href}
+                            className={cn(
+                              "flex items-center space-x-2 text-sm font-medium transition-colors hover:text-primary",
+                              pathname === item.href
+                                ? "text-primary"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {item.label}
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </SheetHeader>
+              </SheetContent>
+            </Sheet>
+            <div className='absolute left-1/2 -translate-x-1/2'>
+              <Link href='/' className='flex items-center space-x-2'>
+                <span className='font-bold text-xl'>Skincare Tracker</span>
+              </Link>
+            </div>
+            <div>
+              <Button asChild size='sm' variant='secondary'>
+                <Link href='/products/add'>
+                  <Plus />
+                </Link>
+              </Button>
+            </div>
+          </div>
 
           {/* Desktop Nav */}
-          <NavigationMenuList className='hidden md:flex h-16 items-center justify-between'>
+          <NavigationMenuList className='hidden md:flex items-center justify-between h-16'>
             <div className='flex items-center space-x-8'>
               <NavigationMenuItem>
                 <NavigationMenuLink

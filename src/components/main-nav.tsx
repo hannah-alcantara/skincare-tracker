@@ -53,7 +53,7 @@ export const MainNav = () => {
               </SheetTrigger>
               <SheetContent side='left'>
                 <SheetHeader>
-                  <div className='flex flex-col gap-4'>
+                  <div className='flex flex-col gap-8'>
                     <div>
                       <Link
                         href='/products'

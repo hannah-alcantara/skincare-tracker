@@ -144,12 +144,10 @@ export const MainNav = () => {
             </div>
 
             <NavigationMenuItem>
-              <NavigationMenuLink>
-                <Button asChild>
-                  <Link href='/products/add'>
-                    <Plus className='h-4 w-4 mr-2' />
-                    Add Product
-                  </Link>
+              <NavigationMenuLink href='/products/add'>
+                <Button >
+                  <Plus className='h-4 w-4 mr-2' />
+                  Add Product
                 </Button>
               </NavigationMenuLink>
             </NavigationMenuItem>

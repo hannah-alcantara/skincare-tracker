@@ -1,9 +1,10 @@
 import { createClient } from "@/utils/supabase/client";
+import { Product, AddProduct } from "@/utils/supabase/types";
+
+const supabase = createClient();
 
 // Simple function to test fetching products
 export async function getAllProducts() {
-  const supabase = createClient();
-
   const { data, error } = await supabase.from("products").select("*");
 
   if (error) {
@@ -15,25 +16,18 @@ export async function getAllProducts() {
   return { data, error: null };
 }
 
-// Simple function to test creating a product
-export async function createProduct(productData: {
-  brand: string;
-  name: string;
-  price?: number;
-  notes?: string;
-}) {
-  const supabase = createClient();
-
+export async function createProduct(productData: AddProduct): Promise<Product> {
   const { data, error } = await supabase
     .from("products")
     .insert([productData])
-    .select();
+    .select()
+    .single();
 
   if (error) {
     console.error("Error creating product:", error);
-    return { data: null, error };
+    throw new Error(error.message);
   }
 
   console.log("Product created successfully:", data);
-  return { data, error: null };
+  return data;
 }

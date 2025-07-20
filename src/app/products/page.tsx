@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +13,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEffect, useState } from "react";
+import { Product } from "@/utils/supabase/types";
+import { getProducts } from "@/services/productService";
+import ProductCard from "@/components/product-card";
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+        console.log(data);
+      } catch (error) {
+        setError("Failed to load products. Please try again.");
+        console.error("Product loading error", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
   return (
     <div className='space-y-6'>
       <div className='flex items-center justify-between'>
@@ -90,6 +119,12 @@ export default function ProductsPage() {
 
         <TabsContent value='active' className='space-y-4'>
           <Card>
+            {/* Fix: Need to separate active and finished products */}
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
             <CardContent className='flex items-center justify-center py-12'>
               <div className='text-center'>
                 <p className='text-muted-foreground'>

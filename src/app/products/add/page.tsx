@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,28 +18,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Toaster } from "@/components/ui/sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { createProduct } from "@/services/productService";
 import { AddProduct, ProductTypes } from "@/utils/supabase/types";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { format, parse } from "date-fns";
+import { CalendarIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+// Converts a JS Date → "YYYY-MM-DD" for Supabase
+export function dateToString(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
+
+// Converts "YYYY-MM-DD" → JS Date
+export function stringToDate(dateString: string): Date {
+  return parse(dateString, "yyyy-MM-dd", new Date());
+}
+
 export default function AddProductPage() {
   const router = useRouter();
+  const [newTag, setNewTag] = useState("");
 
   const [formData, setFormData] = useState({
     brand: "",
     name: "",
     type: "",
     date_opened: "",
-    // date_finished: "",
+    date_finished: "",
     expiration_date: "",
     price: "",
-    // notes: "",
-    // tags: "",
+    notes: "",
+    tags: [] as string[],
   });
 
   const handleInputChange = (
@@ -54,13 +68,30 @@ export default function AddProductPage() {
     setFormData((prev) => ({ ...prev, type }));
   };
 
-  // Helper functions to convert between string and Date
-  const stringToDate = (dateString: string): Date | undefined => {
-    return dateString ? new Date(dateString) : undefined;
+  // Add later: case sensitive to prevent duplicate tags
+  const addTag = () => {
+    const trimmedTag = newTag.trim();
+
+    if (!trimmedTag) return;
+
+    if (formData.tags.includes(trimmedTag)) {
+      toast.error("This tag already exists.");
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      tags: [...prev.tags, trimmedTag],
+    }));
+
+    setNewTag("");
   };
 
-  const dateToString = (date: Date | undefined): string => {
-    return date ? format(date, "yyyy-MM-dd") : "";
+  const removeTag = (tagToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,13 +102,11 @@ export default function AddProductPage() {
       name: formData.name,
       type: formData.type,
       date_opened: formData.date_opened || null,
-      // date_finished: formData.date_finished || null,
-      // expiration_date: formData.expiration_date,
+      date_finished: formData.date_finished || null,
+      expiration_date: formData.expiration_date || null,
       price: formData.price ? parseFloat(formData.price) : null,
-      // notes: formData.notes || null,
-      // tags: formData.tags
-      //   ? formData.tags.split(",").map((tag) => tag.trim())
-      //   : null,
+      notes: formData.notes || null,
+      tags: formData.tags,
     };
 
     try {
@@ -161,12 +190,46 @@ export default function AddProductPage() {
                     <Button
                       variant='outline'
                       className={cn(
-                        "w-[240px] pl-3 justify-between text-left font-normal",
+                        "w-full justify-between text-left font-normal",
                         !formData.date_opened && "text-muted-foreground"
                       )}
                     >
                       {formData.date_opened ? (
-                        format(stringToDate(formData.date_opened)!, "PPP")
+                        format(stringToDate(formData.date_opened), "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+
+                      <CalendarIcon />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-auto p-0'>
+                    <Calendar
+                      mode='single'
+                      onSelect={(date) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          date_opened: date ? dateToString(date) : "",
+                        }))
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {/* need to get date opened and not allow to go back from that date */}
+              <div className='space-y-2'>
+                <Label htmlFor='expirationDate'>Expiration Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant='outline'
+                      className={cn(
+                        "w-full justify-between text-left font-normal",
+                        !formData.expiration_date && "text-muted-foreground"
+                      )}
+                    >
+                      {formData.expiration_date ? (
+                        format(stringToDate(formData.expiration_date), "PPP")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -179,28 +242,16 @@ export default function AddProductPage() {
                       onSelect={(date) =>
                         setFormData((prev) => ({
                           ...prev,
-                          date_opened: dateToString(date),
+                          expiration_date: date ? dateToString(date) : "",
                         }))
                       }
-                      // autoFocus
                     />
                   </PopoverContent>
                 </Popover>
               </div>
-              {/* <div className='space-y-2'>
-                <Label htmlFor='expirationDate'>Expiration Date *</Label>
-                <Input
-                  id='expirationDate'
-                  name='expirationDate'
-                  type='date'
-                  value={formData.expiration_date}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div> */}
 
               {/* Price */}
-              {/* <div className='space-y-2'>
+              <div className='space-y-2'>
                 <Label htmlFor='price'>Price *</Label>
                 <Input
                   id='price'
@@ -212,9 +263,93 @@ export default function AddProductPage() {
                   onChange={handleInputChange}
                   required
                 ></Input>
-              </div> */}
+              </div>
             </div>
 
+            <div className='space-y-2'>
+              <Label htmlFor='dateFinished'>
+                Date Finished (if applicable) *
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant='outline'
+                    className={cn(
+                      "w-full justify-between text-left font-normal",
+                      !formData.date_finished && "text-muted-foreground"
+                    )}
+                  >
+                    {formData.date_finished ? (
+                      format(stringToDate(formData.date_finished), "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                    <CalendarIcon />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className='w-auto p-0'>
+                  <Calendar
+                    mode='single'
+                    onSelect={(date) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        date_finished: date ? dateToString(date) : "",
+                      }))
+                    }
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className='space-y-2'>
+              <Label>Tags</Label>
+              <div className='flex gap-2'>
+                <Input
+                  placeholder='Add a tag'
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), addTag())
+                  }
+                />
+                <Button type='button' onClick={addTag} variant='outline'>
+                  Add
+                </Button>
+              </div>
+              {formData.tags.length > 0 && (
+                <div className='flex flex-wrap gap-2 mt-2'>
+                  {formData.tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant='secondary'
+                      className='flex items-center gap-1'
+                    >
+                      {tag}
+                      <button
+                        type='button'
+                        onClick={() => removeTag(tag)}
+                        className='ml-1 hover:text-red-600'
+                      >
+                        <X className='h-3 w-3' />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='notes'>Notes</Label>
+              <Textarea
+                id='notes'
+                placeholder='Additional notes about this product...'
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                rows={3}
+              />
+            </div>
             <div className='flex gap-4'>
               <Button type='submit'>Add Product</Button>
               <Button

@@ -4,19 +4,17 @@ import { Product, AddProduct } from "@/utils/supabase/types";
 const supabase = createClient();
 
 // Simple function to test fetching products
-export async function getAllProducts() {
+export async function getProducts() {
   const { data, error } = await supabase.from("products").select("*");
 
   if (error) {
-    console.error("Error fetching products:", error);
-    return { data: null, error };
+    throw new Error(`Failed to fetch products: ${error.message}`);
   }
 
-  console.log("Products fetched successfully:", data);
-  return { data, error: null };
+  return data;
 }
 
-export async function createProduct(productData: AddProduct): Promise<Product> {
+export async function createProduct(productData: AddProduct) {
   const { data, error } = await supabase
     .from("products")
     .insert([productData])
@@ -24,10 +22,8 @@ export async function createProduct(productData: AddProduct): Promise<Product> {
     .single();
 
   if (error) {
-    console.error("Error creating product:", error);
-    throw new Error(error.message);
+    throw new Error(`Failed to fetch products: ${error.message}`);
   }
 
-  console.log("Product created successfully:", data);
   return data;
 }

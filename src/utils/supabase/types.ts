@@ -5,26 +5,14 @@ export interface Product {
   type: string;
   date_opened?: string | null;
   expiration_date?: string | null;
-  price?: number | null;
   date_finished?: string | null;
+  price?: number | null;
   tags?: string[] | null;
   notes?: string | null;
 }
 
 export interface ProductCardProps {
   product: Product;
-}
-
-export interface AddProduct {
-  brand: string;
-  name: string;
-  type: string;
-  date_opened?: string | null;
-  expiration_date?: string | null;
-  price?: number | null;
-  date_finished?: string | null;
-  tags?: string[] | null;
-  notes?: string | null;
 }
 
 export interface ProductUpdate {

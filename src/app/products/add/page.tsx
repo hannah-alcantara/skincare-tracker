@@ -18,16 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Toaster } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { createProduct } from "@/services/productService";
-import { AddProduct, ProductTypes } from "@/utils/supabase/types";
+import { createProduct, deleteProduct } from "@/services/productService";
+import { Product, ProductTypes } from "@/utils/supabase/types";
 import { format, parse } from "date-fns";
 import { CalendarIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useForm, Controller } from "react-hook-form";
 
 // Converts a JS Date → "YYYY-MM-DD" for Supabase
 export function dateToString(date: Date): string {
@@ -43,30 +43,48 @@ export default function AddProductPage() {
   const router = useRouter();
   const [newTag, setNewTag] = useState("");
 
-  const [formData, setFormData] = useState({
-    brand: "",
-    name: "",
-    type: "",
-    date_opened: "",
-    date_finished: "",
-    expiration_date: "",
-    price: "",
-    notes: "",
-    tags: [] as string[],
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<Product>({
+    defaultValues: {
+      brand: "",
+      name: "",
+      type: "",
+      date_opened: "",
+      date_finished: "",
+      expiration_date: "",
+      price: 0,
+      notes: "",
+      tags: [],
+    },
+    mode: "onChange",
   });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    console.log(value);
+  const tags = watch("tags");
+  const dateOpened = watch("date_opened");
+
+  const validateExpirationDate = (value: string) => {
+    if (!value) return "Expiration date is required";
+    console.log(value, typeof value);
+
+    if (dateOpened && value) {
+      const openedDate = stringToDate(dateOpened);
+      const expDate = stringToDate(value);
+
+      if (expDate < openedDate) {
+        return "Expiration date cannot be earlier than the date opened";
+      }
+    }
+
+    return true;
   };
 
-  const handleTypeChange = (type: string) => {
-    //add expiration date suggestion
-    setFormData((prev) => ({ ...prev, type }));
-  };
+  //ADD: validateDateFinished
 
   // Add later: case sensitive to prevent duplicate tags
   const addTag = () => {
@@ -74,39 +92,36 @@ export default function AddProductPage() {
 
     if (!trimmedTag) return;
 
-    if (formData.tags.includes(trimmedTag)) {
+    const currentTags = tags || [];
+
+    if (currentTags.includes(trimmedTag)) {
       toast.error("This tag already exists.");
       return;
     }
 
-    setFormData((prev) => ({
-      ...prev,
-      tags: [...prev.tags, trimmedTag],
-    }));
-
+    setValue("tags", [...currentTags, trimmedTag]);
     setNewTag("");
   };
 
   const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }));
+    const currentTags = tags || [];
+    setValue(
+      "tags",
+      currentTags.filter((tag) => tag !== tagToRemove)
+    );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const productData: AddProduct = {
-      brand: formData.brand,
-      name: formData.name,
-      type: formData.type,
-      date_opened: formData.date_opened || null,
-      date_finished: formData.date_finished || null,
-      expiration_date: formData.expiration_date || null,
-      price: formData.price ? parseFloat(formData.price) : null,
-      notes: formData.notes || null,
-      tags: formData.tags,
+  const onSubmit = async (data: Product) => {
+    const productData: Product = {
+      brand: data.brand,
+      name: data.name,
+      type: data.type,
+      date_opened: data.date_opened || null,
+      date_finished: data.date_finished || null,
+      expiration_date: data.expiration_date || null,
+      price: data.price || null,
+      notes: data.notes || null,
+      tags: data.tags || null,
     };
 
     try {
@@ -134,173 +149,225 @@ export default function AddProductPage() {
           <CardTitle>Product Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className='space-y-6'>
+          <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
+            {/* Brand */}
             <div className='grid gap-4 md:grid-cols-2'>
               <div className='space-y-2'>
                 <Label htmlFor='brand'>Brand *</Label>
                 <Input
                   id='brand'
-                  name='brand'
                   type='text'
-                  value={formData.brand}
-                  onChange={handleInputChange}
-                  required
-                ></Input>
+                  {...register("brand", {
+                    required: "Brand is required",
+                  })}
+                />
+                {errors.brand && (
+                  <p className='text-xs text-red-600'>{errors.brand.message}</p>
+                )}
               </div>
+
+              {/* Product Name */}
               <div className='space-y-2'>
                 <Label htmlFor='name'>Product Name *</Label>
                 <Input
                   id='name'
-                  name='name'
                   type='text'
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                ></Input>
+                  {...register("name", {
+                    required: "Product name is required",
+                  })}
+                />
+                {errors.name && (
+                  <p className='text-xs text-red-600'>{errors.name.message}</p>
+                )}
               </div>
             </div>
 
             {/* Product Types */}
             <div className='space-y-2'>
               <Label htmlFor='type'>Product Type *</Label>
-              <Select
-                value={formData.type}
-                onValueChange={handleTypeChange}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select product type' />
-                </SelectTrigger>
-                <SelectContent>
-                  {ProductTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name='type'
+                control={control}
+                rules={{ required: "Product type is required" }}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select product type' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ProductTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.type && (
+                <p className='text-xs text-red-600'>{errors.type.message}</p>
+              )}
             </div>
 
             <div className='grid gap-4 md:grid-cols-3'>
               {/* Date Opened */}
               <div className='space-y-2'>
                 <Label htmlFor='dateOpened'>Date Opened </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      className={cn(
-                        "w-full justify-between text-left font-normal",
-                        !formData.date_opened && "text-muted-foreground"
-                      )}
-                    >
-                      {formData.date_opened ? (
-                        format(stringToDate(formData.date_opened), "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
+                <Controller
+                  name='date_opened'
+                  control={control}
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant='outline'
+                          className={cn(
+                            "w-full justify-between text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(stringToDate(field.value), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
 
-                      <CalendarIcon />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0'>
-                    <Calendar
-                      mode='single'
-                      onSelect={(date) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          date_opened: date ? dateToString(date) : "",
-                        }))
-                      }
-                    />
-                  </PopoverContent>
-                </Popover>
+                          <CalendarIcon />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className='w-auto p-0'>
+                        <Calendar
+                          mode='single'
+                          selected={
+                            field.value ? stringToDate(field.value) : undefined
+                          }
+                          onSelect={(date) =>
+                            field.onChange(date ? dateToString(date) : "")
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
               </div>
               {/* need to get date opened and not allow to go back from that date */}
               <div className='space-y-2'>
                 <Label htmlFor='expirationDate'>Expiration Date *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      className={cn(
-                        "w-full justify-between text-left font-normal",
-                        !formData.expiration_date && "text-muted-foreground"
-                      )}
-                    >
-                      {formData.expiration_date ? (
-                        format(stringToDate(formData.expiration_date), "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-0'>
-                    <Calendar
-                      mode='single'
-                      onSelect={(date) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          expiration_date: date ? dateToString(date) : "",
-                        }))
-                      }
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Controller
+                  name='expiration_date'
+                  control={control}
+                  rules={{
+                    required: "Expiration date is required",
+                    validate: validateExpirationDate,
+                  }}
+                  render={({ field }) => (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant='outline'
+                          className={cn(
+                            "w-full justify-between text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(stringToDate(field.value), "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className='w-auto p-0'>
+                        <Calendar
+                          mode='single'
+                          selected={
+                            field.value ? stringToDate(field.value) : undefined
+                          }
+                          onSelect={(date) =>
+                            field.onChange(date ? dateToString(date) : "")
+                          }
+                          disabled={(date) => {
+                            if (dateOpened) {
+                              return date < stringToDate(dateOpened);
+                            }
+                            return false;
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                />
+                {errors.expiration_date && (
+                  <p className='text-xs text-red-600'>
+                    {errors.expiration_date.message}
+                  </p>
+                )}
               </div>
 
               {/* Price */}
+              {/* Remove 0 when input field is selected */}
               <div className='space-y-2'>
-                <Label htmlFor='price'>Price *</Label>
+                <Label htmlFor='price'>Price</Label>
                 <Input
                   id='price'
-                  name='price'
                   type='number'
                   step='0.01'
                   min='0'
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  required
-                ></Input>
+                  {...register("price", {
+                    min: {
+                      value: 0,
+                      message: "Proce must be a positive number",
+                    },
+                    valueAsNumber: true,
+                  })}
+                />
               </div>
             </div>
 
+            {/* Date Finished */}
             <div className='space-y-2'>
               <Label htmlFor='dateFinished'>
-                Date Finished (if applicable) *
+                Date Finished (if applicable)
               </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant='outline'
-                    className={cn(
-                      "w-full justify-between text-left font-normal",
-                      !formData.date_finished && "text-muted-foreground"
-                    )}
-                  >
-                    {formData.date_finished ? (
-                      format(stringToDate(formData.date_finished), "PPP")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                    <CalendarIcon />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className='w-auto p-0'>
-                  <Calendar
-                    mode='single'
-                    onSelect={(date) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        date_finished: date ? dateToString(date) : "",
-                      }))
-                    }
-                  />
-                </PopoverContent>
-              </Popover>
+              <Controller
+                name='date_finished'
+                control={control}
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        className={cn(
+                          "w-full justify-between text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(stringToDate(field.value), "PPP")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                        <CalendarIcon />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-0'>
+                      <Calendar
+                        mode='single'
+                        selected={
+                          field.value ? stringToDate(field.value) : undefined
+                        }
+                        onSelect={(date) =>
+                          field.onChange(date ? dateToString(date) : "")
+                        }
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
             </div>
 
+            {/* Tags */}
             <div className='space-y-2'>
               <Label>Tags</Label>
               <div className='flex gap-2'>
@@ -316,9 +383,9 @@ export default function AddProductPage() {
                   Add
                 </Button>
               </div>
-              {formData.tags.length > 0 && (
+              {(tags || []).length > 0 && (
                 <div className='flex flex-wrap gap-2 mt-2'>
-                  {formData.tags.map((tag, index) => (
+                  {(tags || []).map((tag, index) => (
                     <Badge
                       key={index}
                       variant='secondary'
@@ -338,20 +405,20 @@ export default function AddProductPage() {
               )}
             </div>
 
+            {/* Notes */}
             <div className='space-y-2'>
               <Label htmlFor='notes'>Notes</Label>
               <Textarea
                 id='notes'
                 placeholder='Additional notes about this product...'
-                value={formData.notes}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
                 rows={3}
+                {...register("notes")}
               />
             </div>
             <div className='flex gap-4'>
-              <Button type='submit'>Add Product</Button>
+              <Button type='submit' disabled={isSubmitting}>
+                {isSubmitting ? "Adding Product..." : "Add Product"}
+              </Button>
               <Button
                 type='button'
                 variant='outline'

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Edit, Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { ProductCardProps } from "@/utils/supabase/types";
+import { deleteProduct } from "@/services/productService";
 
 export default function ProductCard({ product }: ProductCardProps) {
   return (
@@ -24,6 +25,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               variant='ghost'
               size='sm'
               className='text-red-600 hover:text-red-700'
+              onClick={() => deleteProduct(product.id)}
             >
               <Trash2 className='h-4 w-4' />
             </Button>
@@ -51,13 +53,13 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           <div className='flex justify-between'>
             <span className='text-muted-foreground'>Price:</span>
-            <span>$0</span>
+            <span>${product.price}</span>
           </div>
         </div>
 
         <div className='flex flex-wrap gap-1'>
           <Badge variant='secondary' className='text-xs'>
-            tag
+            {product.tags}
           </Badge>
         </div>
 

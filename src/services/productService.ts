@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-import { Product, AddProduct } from "@/utils/supabase/types";
+import { Product } from "@/utils/supabase/types";
 
 const supabase = createClient();
 
@@ -14,7 +14,7 @@ export async function getProducts() {
   return data;
 }
 
-export async function createProduct(productData: AddProduct) {
+export async function createProduct(productData: Product) {
   const { data, error } = await supabase
     .from("products")
     .insert([productData])
@@ -23,6 +23,20 @@ export async function createProduct(productData: AddProduct) {
 
   if (error) {
     throw new Error(`Failed to fetch products: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function deleteProduct(productId: string) {
+  const { data, error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId)
+    .select();
+
+  if (error) {
+    throw new Error(`Failed to delete product: ${error.message}`);
   }
 
   return data;

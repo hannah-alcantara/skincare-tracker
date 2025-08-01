@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { Product } from "@/utils/supabase/types";
-import { getProducts } from "@/services/productService";
+import { deleteProduct, getProducts } from "@/services/productService";
 import ProductCard from "@/components/product-card";
 
 export default function ProductsPage() {
@@ -38,6 +38,19 @@ export default function ProductsPage() {
     };
     fetchProducts();
   }, []);
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      // Remove the deleted product from local state
+      setProducts(prevProducts =>
+        prevProducts.filter(product => product.id !== productId)
+      );
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      // Handle error (show toast, etc.)
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -122,7 +135,7 @@ export default function ProductsPage() {
             {/* Fix: Need to separate active and finished products */}
             <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} onDelete={handleDeleteProduct} />
               ))}
             </div>
             <CardContent className='flex items-center justify-center py-12'>

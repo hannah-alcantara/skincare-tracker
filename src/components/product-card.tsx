@@ -3,10 +3,19 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { Edit, Trash2 } from "lucide-react";
 import { Badge } from "./ui/badge";
-import { ProductCardProps } from "@/utils/supabase/types";
+import { Product } from "@/utils/supabase/types";
 import { deleteProduct } from "@/services/productService";
 
-export default function ProductCard({ product }: ProductCardProps) {
+export interface ProductCardProps {
+  product: Product;
+  onDelete: (productId: string) => Promise<void>;
+}
+
+export default function ProductCard({ product, onDelete }: ProductCardProps) {
+  const handleDelete = async () => {
+    await onDelete(product.id)
+  }
+
   return (
     <Card className='relative'>
       <CardHeader className='pb-3'>
@@ -25,7 +34,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               variant='ghost'
               size='sm'
               className='text-red-600 hover:text-red-700'
-              onClick={() => deleteProduct(product.id)}
+              onClick={handleDelete}
             >
               <Trash2 className='h-4 w-4' />
             </Button>

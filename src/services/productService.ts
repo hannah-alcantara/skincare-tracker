@@ -41,3 +41,18 @@ export async function deleteProduct(productId: string) {
 
   return data;
 }
+
+export async function editProduct(productId: string, updates: Partial<Product>) {
+  const { data, error } = await supabase
+    .from("products")
+    .update(updates)
+    .eq("id", productId)
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error('Failed to update product: ${error.message}')
+  }
+
+  return data;
+}

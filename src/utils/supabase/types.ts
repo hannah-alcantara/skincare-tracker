@@ -11,9 +11,6 @@ export interface Product {
   notes?: string | null;
 }
 
-export interface ProductCardProps {
-  product: Product;
-}
 
 export interface ProductUpdate {
   brand?: string;

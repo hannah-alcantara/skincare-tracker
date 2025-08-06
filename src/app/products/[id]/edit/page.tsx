@@ -20,18 +20,18 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { createProduct } from "@/services/productService";
+import { getProductById, updateProduct } from "@/services/productService";
 import { Product, ProductTypes } from "@/utils/supabase/types";
 import { format, parse } from "date-fns";
 import { CalendarIcon, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const addProductSchema = z
+// Zod schema for edit form
+const editProductSchema = z
   .object({
     brand: z.string().min(1, "Brand is required"),
     name: z.string().min(1, "Product name is required"),
@@ -59,7 +59,6 @@ const addProductSchema = z
   )
   .refine(
     (data) => {
-      // Custom validation: date finished must be after date opened
       if (data.date_opened && data.date_finished) {
         const openedDate = stringToDate(data.date_opened);
         const finishedDate = stringToDate(data.date_finished);
@@ -73,7 +72,7 @@ const addProductSchema = z
     }
   );
 
-type AddProductFormData = z.infer<typeof addProductSchema>;
+type EditProductFormData = z.infer<typeof editProductSchema>;
 
 // Date helper functions
 export function dateToString(date: Date): string {
@@ -84,8 +83,14 @@ export function stringToDate(dateString: string): Date {
   return parse(dateString, "yyyy-MM-dd", new Date());
 }
 
-export default function AddProductPage() {
+export default function EditProductPage() {
   const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [newTag, setNewTag] = useState("");
 
   const {
@@ -94,8 +99,9 @@ export default function AddProductPage() {
     control,
     watch,
     setValue,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm<AddProductFormData>({
+  } = useForm<EditProductFormData>({
     defaultValues: {
       brand: "",
       name: "",
@@ -110,6 +116,38 @@ export default function AddProductPage() {
     mode: "onChange",
   });
 
+  // Fetch product data
+  useEffect(() => {
+    async function fetchProduct() {
+      try {
+        setLoading(true);
+        const productData = await getProductById(productId);
+        setProduct(productData);
+
+        // Populate form with existing data
+        reset({
+          brand: productData.brand || "",
+          name: productData.name || "",
+          type: productData.type || "",
+          date_opened: productData.date_opened || "",
+          date_finished: productData.date_finished || "",
+          expiration_date: productData.expiration_date || "",
+          price: productData.price || 0,
+          notes: productData.notes || "",
+          tags: productData.tags || [],
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load product");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (productId) {
+      fetchProduct();
+    }
+  }, [productId, reset]);
+
   const tags = watch("tags");
   const dateOpened = watch("date_opened");
 
@@ -123,7 +161,6 @@ export default function AddProductPage() {
 
     const currentTags = tags || [];
 
-    // Check for duplicates (case insensitive)
     if (
       currentTags.some((tag) => tag.toLowerCase() === trimmedTag.toLowerCase())
     ) {
@@ -143,25 +180,49 @@ export default function AddProductPage() {
     );
   };
 
-  const onSubmit = async (data: AddProductFormData) => {
+  const onSubmit = async (data: EditProductFormData) => {
     try {
-      await createProduct(data as Product);
-      toast.success("Product added successfully!");
+      await updateProduct(productId, data);
+      toast.success("Product updated successfully!");
       router.push("/products");
       router.refresh();
     } catch (error) {
-      console.error("Error adding product:", error);
-      toast.error("Failed to add product. Please try again.");
+      console.error("Error updating product:", error);
+      toast.error("Failed to update product. Please try again.");
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto'></div>
+          <p className='mt-2 text-gray-600'>Loading product...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !product) {
+    return (
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='text-center'>
+          <p className='text-red-600'>Error: {error || "Product not found"}</p>
+          <Button onClick={() => router.push("/products")} className='mt-4'>
+            Back to Products
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='max-w-2xl mx-auto space-y-6'>
       <div>
-        <h1 className='text-3xl font-bold tracking-tight'>Add Product</h1>
-        <p className='text-muted-foreground'>
-          Add a new product to your collection
-        </p>
+        <h1 className='text-3xl font-bold tracking-tight'>Edit Product</h1>
+        <p className='text-muted-foreground'>Update your product details</p>
       </div>
 
       <Card>
@@ -225,7 +286,7 @@ export default function AddProductPage() {
               )}
             </div>
 
-            {/* Dates & Price */}
+            {/* Dates & Price - Same as Add form */}
             <div className='grid gap-4 md:grid-cols-3'>
               {/* Date Opened */}
               <div className='space-y-2'>
@@ -444,7 +505,7 @@ export default function AddProductPage() {
             {/* Submit Buttons */}
             <div className='flex gap-4'>
               <Button type='submit' disabled={isSubmitting}>
-                {isSubmitting ? "Adding Product..." : "Add Product"}
+                {isSubmitting ? "Updating Product..." : "Update Product"}
               </Button>
               <Button
                 type='button'

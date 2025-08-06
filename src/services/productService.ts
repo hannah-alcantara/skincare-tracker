@@ -42,16 +42,33 @@ export async function deleteProduct(productId: string) {
   return data;
 }
 
-export async function editProduct(productId: string, updates: Partial<Product>) {
+export async function getProductById(productId: string) {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("id", productId)
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to fetch product: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function updateProduct(
+  productId: string,
+  updates: Partial<Product>
+) {
   const { data, error } = await supabase
     .from("products")
     .update(updates)
     .eq("id", productId)
     .select()
-    .single()
+    .single();
 
   if (error) {
-    throw new Error('Failed to update product: ${error.message}')
+    throw new Error(`Failed to update product: ${error.message}`);
   }
 
   return data;

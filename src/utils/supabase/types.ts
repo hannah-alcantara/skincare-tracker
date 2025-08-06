@@ -11,7 +11,6 @@ export interface Product {
   notes?: string | null;
 }
 
-
 export interface ProductUpdate {
   brand?: string;
   name?: string;
@@ -21,6 +20,11 @@ export interface ProductUpdate {
   price?: number | null;
   notes?: string | null;
   tags?: string[] | null;
+}
+
+export interface ProductCardProps {
+  product: Product;
+  onDelete: (id: string) => void;
 }
 
 export const ProductTypes = [

@@ -23,6 +23,27 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Helper function to determine if a product is finished/expired
+  const isProductFinished = (product: Product): boolean => {
+    // Product is finished if it has a date_finished
+    if (product.date_finished) {
+      return true;
+    }
+    
+    // Product is expired if expiration_date has passed
+    if (product.expiration_date) {
+      const now = new Date();
+      const expirationDate = new Date(product.expiration_date);
+      return expirationDate < now;
+    }
+    
+    return false;
+  };
+
+  // Separate products into active and finished
+  const activeProducts = products.filter(product => !isProductFinished(product));
+  const finishedProducts = products.filter(product => isProductFinished(product));
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -132,35 +153,49 @@ export default function ProductsPage() {
 
         <TabsContent value='active' className='space-y-4'>
           <Card>
-            {/* Fix: Need to separate active and finished products */}
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} onDelete={handleDeleteProduct} />
-              ))}
-            </div>
-            <CardContent className='flex items-center justify-center py-12'>
-              <div className='text-center'>
-                <p className='text-muted-foreground'>
-                  No active products found
-                </p>
-                <Button asChild className='mt-4'>
-                  <Link href='/products/add'>Add your first product</Link>
-                </Button>
-              </div>
-            </CardContent>
+            {activeProducts.length > 0 ? (
+              <CardContent className='p-6'>
+                <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+                  {activeProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} onDelete={handleDeleteProduct} />
+                  ))}
+                </div>
+              </CardContent>
+            ) : (
+              <CardContent className='flex items-center justify-center py-12'>
+                <div className='text-center'>
+                  <p className='text-muted-foreground'>
+                    No active products found
+                  </p>
+                  <Button asChild className='mt-4'>
+                    <Link href='/products/add'>Add your first product</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </TabsContent>
 
         <TabsContent value='finished' className='space-y-4'>
           <Card>
-            <CardContent className='flex items-center justify-center py-12'>
-              <div className='text-center'>
-                <p className='text-muted-foreground'>No finished products</p>
-                <Button asChild className='mt-4'>
-                  <Link href='/products/add'>Add your first product</Link>
-                </Button>
-              </div>
-            </CardContent>
+            {finishedProducts.length > 0 ? (
+              <CardContent className='p-6'>
+                <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+                  {finishedProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} onDelete={handleDeleteProduct} />
+                  ))}
+                </div>
+              </CardContent>
+            ) : (
+              <CardContent className='flex items-center justify-center py-12'>
+                <div className='text-center'>
+                  <p className='text-muted-foreground'>No finished products</p>
+                  <Button asChild className='mt-4'>
+                    <Link href='/products/add'>Add your first product</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

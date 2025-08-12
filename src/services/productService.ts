@@ -14,7 +14,7 @@ export async function getProducts() {
   return data;
 }
 
-export async function createProduct(productData: Product) {
+export async function createProduct(productData: Omit<Product, "id">) {
   const { data, error } = await supabase
     .from("products")
     .insert([productData])

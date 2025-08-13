@@ -14,68 +14,20 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import { ProductCardProps } from "@/utils/supabase/types";
-import { format } from "date-fns";
+import { formatDate, getProductStatusInfo } from "@/lib/date-utils";
 
 interface ProductCardPropsWithDelete extends ProductCardProps {
   onDelete: (productId: string) => Promise<void>;
 }
 
-const formatDate = (date: Date | string | null | undefined): string => {
-  if (!date) return "Not set";
-  const dateObj = typeof date === "string" ? new Date(date) : date;
-  return format(dateObj, "MMM d, yyyy");
-};
 
-const getProductStatus = (product: ProductCardProps["product"]) => {
-  const now = new Date();
-
-  // Product is finished if it has a date_finished
-  if (product.date_finished) {
-    return {
-      status: "finished",
-      label: "Finished",
-      variant: "secondary" as const,
-      className: "",
-    };
-  }
-
-  // Check expiration status
-  if (product.expiration_date) {
-    const expirationDate = new Date(product.expiration_date);
-    const timeDiff = expirationDate.getTime() - now.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    if (daysDiff < 0) {
-      return {
-        status: "expired",
-        label: "Expired",
-        variant: "destructive" as const,
-        className: "",
-      };
-    } else if (daysDiff <= 30) {
-      return {
-        status: "expiring-soon",
-        label: "Expiring Soon",
-        variant: "secondary" as const,
-        className: "bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200",
-      };
-    }
-  }
-
-  return { 
-    status: "active", 
-    label: "Active", 
-    variant: "default" as const,
-    className: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
-  };
-};
 
 export default function ProductCard({
   product,
   onDelete,
 }: ProductCardPropsWithDelete) {
   const handleDelete = async () => await onDelete(product.id);
-  const productStatus = getProductStatus(product);
+  const productStatus = getProductStatusInfo(product);
 
   return (
     <Card className='relative'>

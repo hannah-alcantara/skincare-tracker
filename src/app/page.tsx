@@ -12,29 +12,14 @@ import {
   CheckCircle,
   FlaskConical,
 } from "lucide-react";
+import { 
+  formatDate, 
+  getProductStatus, 
+  getBadgeProps,
+  sortProductsByExpiration 
+} from "@/lib/date-utils";
+import { LoadingPage } from "@/components/loading-page";
 
-// helper function to determine product status
-const getProductStatus = (product: Product) => {
-  const now = new Date();
-
-  // Product is finished if it has a date_finished
-  if (product.date_finished) {
-    return "finished";
-  }
-
-  if (product.expiration_date) {
-    const expirationDate = new Date(product.expiration_date);
-    const timeDiff = expirationDate.getTime() - now.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    if (daysDiff < 0) {
-      return "expired";
-    } else if (daysDiff <= 30) {
-      return "expiring-soon";
-    }
-  }
-  return "active";
-};
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -51,7 +36,7 @@ export default function Home() {
         setLoading(false);
       }
     };
-    
+
     fetchProducts();
   }, []);
 
@@ -60,6 +45,31 @@ export default function Home() {
   const activeProducts = products.filter(p => getProductStatus(p) === "active").length;
   const expiringSoonProducts = products.filter(p => getProductStatus(p) === "expiring-soon").length;
   const expiredProducts = products.filter(p => getProductStatus(p) === "expired").length;
+
+  // Get products expiring soon, sorted by expiration date
+  const upcomingExpirations = sortProductsByExpiration(
+    products.filter(p => getProductStatus(p) === "expiring-soon" && p.expiration_date)
+  ).slice(0, 5); // Show top 5 expiring products
+
+  // Calculate product type counts
+  const productTypeCounts = products.reduce((acc, product) => {
+    if (product.type) {
+      acc[product.type] = (acc[product.type] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Sort product types by count (highest first) and take top 5
+  const topProductTypes = Object.entries(productTypeCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5);
+
+
+
+
+  if (loading) {
+    return <LoadingPage variant="dashboard" message="Loading dashboard" />;
+  }
 
   return (
     <div className='space-y-8'>
@@ -126,17 +136,36 @@ export default function Home() {
           </CardHeader>
 
           <CardContent>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <div className='space-y-1'>
-                  <p className='text-sm font-medium'>Brand and Name</p>
-                  <p className='text-xs text-muted-foreground'>Type</p>
-                </div>
-                <div className='text-right space-y-1'>
-                  <Badge>MM-DD-YYYY</Badge>
-                </div>
+            {loading ? (
+              <div className='space-y-4'>
+                <div className='text-sm text-muted-foreground'>Loading...</div>
               </div>
-            </div>
+            ) : upcomingExpirations.length > 0 ? (
+              <div className='space-y-4'>
+                {upcomingExpirations.map((product) => (
+                  <div key={product.id} className='flex items-center justify-between'>
+                    <div className='space-y-1'>
+                      <p className='text-sm font-medium'>
+                        {product.brand} {product.name}
+                      </p>
+                      <p className='text-xs text-muted-foreground'>{product.type}</p>
+                    </div>
+                    <div className='text-right space-y-1'>
+                      <Badge
+                        variant={getBadgeProps(product).variant}
+                        className={getBadgeProps(product).className}
+                      >
+                        {product.expiration_date && formatDate(product.expiration_date)}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='text-sm text-muted-foreground'>
+                No products expiring in the next 30 days
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -150,15 +179,26 @@ export default function Home() {
           </CardHeader>
 
           <CardContent>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <span className='text-sm font-medium'>Type</span>
-
-                <div className='text-right space-y-1'>
-                  <Badge variant='secondary'>count</Badge>
-                </div>
+            {loading ? (
+              <div className='space-y-4'>
+                <div className='text-sm text-muted-foreground'>Loading...</div>
               </div>
-            </div>
+            ) : topProductTypes.length > 0 ? (
+              <div className='space-y-3'>
+                {topProductTypes.map(([type, count]) => (
+                  <div key={type} className='flex items-center justify-between'>
+                    <span className='text-sm font-medium capitalize'>{type}</span>
+                    <div className='text-right'>
+                      <Badge variant='secondary'>{count}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='text-sm text-muted-foreground'>
+                No product types found
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

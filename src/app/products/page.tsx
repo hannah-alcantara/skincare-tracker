@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Filter, Search } from "lucide-react";
+import { Filter, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,32 +17,98 @@ import { useEffect, useState } from "react";
 import { Product } from "@/utils/supabase/types";
 import { deleteProduct, getProducts } from "@/services/productService";
 import ProductCard from "@/components/product-card";
+import { isProductFinished, getProductStatus, sortProductsByExpiration } from "@/lib/date-utils";
+import { useMemo } from "react";
+import { LoadingPage } from "@/components/loading-page";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // Filter and search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [filterBrand, setFilterBrand] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [sortBy, setSortBy] = useState("");
 
-  // Helper function to determine if a product is finished/expired
-  const isProductFinished = (product: Product): boolean => {
-    // Product is finished if it has a date_finished
-    if (product.date_finished) {
-      return true;
-    }
-    
-    // Product is expired if expiration_date has passed
-    if (product.expiration_date) {
-      const now = new Date();
-      const expirationDate = new Date(product.expiration_date);
-      return expirationDate < now;
-    }
-    
-    return false;
-  };
 
-  // Separate products into active and finished
-  const activeProducts = products.filter(product => !isProductFinished(product));
-  const finishedProducts = products.filter(product => isProductFinished(product));
+  // Get unique values for filter dropdowns
+  const uniqueTypes = useMemo(() => {
+    const types = products.map(p => p.type).filter(Boolean);
+    return [...new Set(types)].sort();
+  }, [products]);
+
+  const uniqueBrands = useMemo(() => {
+    const brands = products.map(p => p.brand).filter(Boolean);
+    return [...new Set(brands)].sort();
+  }, [products]);
+
+  // Filter and search logic
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.brand.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Type filter
+    if (filterType && filterType !== "all") {
+      filtered = filtered.filter(product => product.type === filterType);
+    }
+
+    // Brand filter
+    if (filterBrand && filterBrand !== "all") {
+      filtered = filtered.filter(product => product.brand === filterBrand);
+    }
+
+    // Status filter
+    if (filterStatus && filterStatus !== "all") {
+      if (filterStatus === "finished") {
+        filtered = filtered.filter(product => isProductFinished(product));
+      } else {
+        filtered = filtered.filter(product => 
+          !isProductFinished(product) && getProductStatus(product) === filterStatus
+        );
+      }
+    }
+
+    // Sorting
+    if (sortBy && sortBy !== "default") {
+      switch (sortBy) {
+        case "name":
+          filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case "brand":
+          filtered = [...filtered].sort((a, b) => a.brand.localeCompare(b.brand));
+          break;
+        case "expiration":
+          filtered = sortProductsByExpiration([...filtered]);
+          break;
+        case "newest":
+          filtered = [...filtered].sort((a, b) => {
+            // Sort by date_opened if available, otherwise keep original order
+            const dateA = a.date_opened ? new Date(a.date_opened).getTime() : 0;
+            const dateB = b.date_opened ? new Date(b.date_opened).getTime() : 0;
+            return dateB - dateA;
+          });
+          break;
+        default:
+          break;
+      }
+    }
+
+    return filtered;
+  }, [products, searchTerm, filterType, filterBrand, filterStatus, sortBy]);
+
+  // Separate filtered products into active and finished
+  const activeProducts = filteredProducts.filter(product => !isProductFinished(product));
+  const finishedProducts = filteredProducts.filter(product => isProductFinished(product));
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -73,7 +139,7 @@ export default function ProductsPage() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <LoadingPage variant="products" message="Loading products" />;
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -85,9 +151,6 @@ export default function ProductsPage() {
             Manage your skincare product collection
           </p>
         </div>
-        <Button asChild>
-          <Link href='/products/add'>Add Product</Link>
-        </Button>
       </div>
 
       {/* Filter and Search */}
@@ -105,42 +168,86 @@ export default function ProductsPage() {
             <div className='lg:col-span-2'>
               <div className='relative'>
                 <Search className='absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
-                <Input placeholder='Search products...' className='pl-9' />
+                <Input 
+                  placeholder='Search products...' 
+                  className='pl-9'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
-            <Select>
+            <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger>
                 <SelectValue placeholder='Product Type' />
               </SelectTrigger>
               <SelectContent>
-                {/* <SelectItem>All Types</SelectItem> */}
+                <SelectItem value="all">All Types</SelectItem>
+                {uniqueTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={filterBrand} onValueChange={setFilterBrand}>
               <SelectTrigger>
                 <SelectValue placeholder='Brand' />
               </SelectTrigger>
               <SelectContent>
-                {/* <SelectItem>All Types</SelectItem> */}
+                <SelectItem value="all">All Brands</SelectItem>
+                {uniqueBrands.map((brand) => (
+                  <SelectItem key={brand} value={brand}>
+                    {brand}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger>
                 <SelectValue placeholder='Status' />
               </SelectTrigger>
               <SelectContent>
-                {/* <SelectItem>All Types</SelectItem> */}
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="expiring-soon">Expiring Soon</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="finished">Finished</SelectItem>
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger>
                 <SelectValue placeholder='Sort by' />
               </SelectTrigger>
               <SelectContent>
-                {/* <SelectItem>All Types</SelectItem> */}
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="name">Name (A-Z)</SelectItem>
+                <SelectItem value="brand">Brand (A-Z)</SelectItem>
+                <SelectItem value="expiration">Expiration Date</SelectItem>
+                <SelectItem value="newest">Recently Added</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          
+          {/* Clear filters button */}
+          {(searchTerm || (filterType && filterType !== "all") || (filterBrand && filterBrand !== "all") || (filterStatus && filterStatus !== "all") || (sortBy && sortBy !== "default")) && (
+            <div className='flex justify-end mt-4'>
+              <Button 
+                variant='outline' 
+                size='sm'
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterType("");
+                  setFilterBrand("");
+                  setFilterStatus("");
+                  setSortBy("");
+                }}
+                className='flex items-center gap-2'
+              >
+                <X className='h-4 w-4' />
+                Clear Filters
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

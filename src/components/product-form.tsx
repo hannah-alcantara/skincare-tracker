@@ -217,7 +217,7 @@ export default function ProductForm({
   const getShelfLifeSuggestion = (productType: string): string => {
     const months =
       SHELF_LIFE_SUGGESTIONS[
-        productType as keyof typeof SHELF_LIFE_SUGGESTIONS
+      productType as keyof typeof SHELF_LIFE_SUGGESTIONS
       ];
     if (!months) return "";
     return `Suggested shelf life: ${months} months after opening`;
@@ -229,7 +229,7 @@ export default function ProductForm({
       const months = SHELF_LIFE_SUGGESTIONS[
         selectedType as keyof typeof SHELF_LIFE_SUGGESTIONS
       ];
-      
+
       if (months) {
         // In add mode, dateOpened is a Date object
         const calculatedExpiration = addMonths(dateOpened as Date, months);
@@ -270,7 +270,7 @@ export default function ProductForm({
   const handleFormSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
-      
+
       if (mode === "add") {
         await createProduct(data);
         toast.success("Product added successfully!");
@@ -278,7 +278,7 @@ export default function ProductForm({
         await updateProduct(productId, data);
         toast.success("Product updated successfully!");
       }
-      
+
       router.push("/products");
       router.refresh();
     } catch (error) {
@@ -329,8 +329,8 @@ export default function ProductForm({
           mode === "add" && disableBefore instanceof Date
             ? disableBefore
             : typeof disableBefore === "string"
-            ? stringToDate(disableBefore)
-            : disableBefore;
+              ? stringToDate(disableBefore)
+              : disableBefore;
         return date < beforeDate;
       }
       return false;

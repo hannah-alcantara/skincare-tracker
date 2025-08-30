@@ -58,7 +58,7 @@ export default function ProductCard({
                   <DialogTitle>Are you sure?</DialogTitle>
                   <DialogDescription>
                     This action cannot be undone. This will permanently delete
-                    the product "{product.brand} - {product.name}".
+                    the product &quot;{product.brand} - {product.name}&quot;.
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
@@ -77,8 +77,8 @@ export default function ProductCard({
       <CardContent className='space-y-3'>
         <div className='flex items-center justify-between'>
           <Badge variant='outline'>{product.type}</Badge>
-          <Badge 
-            variant={productStatus.variant} 
+          <Badge
+            variant={productStatus.variant}
             className={productStatus.className}
           >
             {productStatus.label}

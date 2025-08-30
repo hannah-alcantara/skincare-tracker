@@ -43,41 +43,40 @@ export function stringToDate(dateString: string): Date {
   return new Date(dateString);
 }
 
-// Common validation schema
-const createProductSchema = (mode: "add" | "edit") => {
-  const baseSchema = z.object({
-    brand: z.string().min(1, "Brand is required."),
-    name: z.string().min(1, "Product name is required."),
-    type: z.string().min(1, "Product type is required."),
-    price: z.number().min(0.0, "Price must be positive.").optional(),
-    notes: z.string().optional(),
-    tags: z.array(z.string()),
-  });
+// Base schema
+const baseSchema = z.object({
+  brand: z.string().min(1, "Brand is required."),
+  name: z.string().min(1, "Product name is required."),
+  type: z.string().min(1, "Product type is required."),
+  price: z.number().min(0.0, "Price must be positive.").optional(),
+  notes: z.string().optional(),
+  tags: z.array(z.string()),
+});
 
-  if (mode === "add") {
-    return baseSchema.extend({
-      date_opened: z.date().optional(),
-      date_finished: z.date().optional(),
-      expiration_date: z.date().optional(),
-    });
-  } else {
-    return baseSchema.extend({
-      date_opened: z.string().optional(),
-      date_finished: z.string().optional(),
-      expiration_date: z.string().min(1, "Expiration date is required"),
-    });
-  }
-};
+// Schema for add mode
+const addModeSchema = baseSchema.extend({
+  date_opened: z.date().optional(),
+  date_finished: z.date().optional(),
+  expiration_date: z.date().optional(),
+});
+
+// Schema for edit mode
+const editModeSchema = baseSchema.extend({
+  date_opened: z.string().optional(),
+  date_finished: z.string().optional(),
+  expiration_date: z.string().min(1, "Expiration date is required"),
+});
+
+// Type inference from schemas
+type AddModeFormData = z.infer<typeof addModeSchema>;
+type EditModeFormData = z.infer<typeof editModeSchema>;
 
 // Add validation refinements
-const addValidationRefinements = <T extends z.ZodTypeAny>(
-  schema: T,
-  mode: "add" | "edit"
-) => {
+const addValidationRefinements = (mode: "add" | "edit") => {
   if (mode === "add") {
-    return schema
+    return addModeSchema
       .refine(
-        (data: any) => {
+        (data: AddModeFormData) => {
           return data.expiration_date != null;
         },
         {
@@ -86,7 +85,7 @@ const addValidationRefinements = <T extends z.ZodTypeAny>(
         }
       )
       .refine(
-        (data: any) => {
+        (data: AddModeFormData) => {
           if (data.date_opened && data.expiration_date) {
             return data.expiration_date >= data.date_opened;
           }
@@ -98,7 +97,7 @@ const addValidationRefinements = <T extends z.ZodTypeAny>(
         }
       )
       .refine(
-        (data: any) => {
+        (data: AddModeFormData) => {
           if (data.date_opened && data.date_finished) {
             return data.date_finished >= data.date_opened;
           }
@@ -110,9 +109,9 @@ const addValidationRefinements = <T extends z.ZodTypeAny>(
         }
       );
   } else {
-    return schema
+    return editModeSchema
       .refine(
-        (data: any) => {
+        (data: EditModeFormData) => {
           if (data.date_opened && data.expiration_date) {
             const openedDate = stringToDate(data.date_opened);
             const expDate = stringToDate(data.expiration_date);
@@ -126,7 +125,7 @@ const addValidationRefinements = <T extends z.ZodTypeAny>(
         }
       )
       .refine(
-        (data: any) => {
+        (data: EditModeFormData) => {
           if (data.date_opened && data.date_finished) {
             const openedDate = stringToDate(data.date_opened);
             const finishedDate = stringToDate(data.date_finished);
@@ -158,7 +157,7 @@ export default function ProductForm({
   const router = useRouter();
 
   // Create schema with validations
-  const schema = addValidationRefinements(createProductSchema(mode), mode);
+  const schema = addValidationRefinements(mode);
   type FormData = z.infer<typeof schema>;
 
   // Helper function to get default values
@@ -272,10 +271,34 @@ export default function ProductForm({
       setIsSubmitting(true);
 
       if (mode === "add") {
-        await createProduct(data);
+        const addData = data as AddModeFormData;
+        const productData = {
+          brand: addData.brand,
+          name: addData.name,
+          type: addData.type,
+          price: addData.price,
+          notes: addData.notes,
+          tags: addData.tags,
+          date_opened: addData.date_opened,
+          date_finished: addData.date_finished,
+          expiration_date: addData.expiration_date,
+        };
+        await createProduct(productData);
         toast.success("Product added successfully!");
       } else if (mode === "edit" && productId) {
-        await updateProduct(productId, data);
+        const editData = data as EditModeFormData;
+        const productData = {
+          brand: editData.brand,
+          name: editData.name,
+          type: editData.type,
+          price: editData.price,
+          notes: editData.notes,
+          tags: editData.tags,
+          date_opened: editData.date_opened ? stringToDate(editData.date_opened) : undefined,
+          date_finished: editData.date_finished ? stringToDate(editData.date_finished) : undefined,
+          expiration_date: stringToDate(editData.expiration_date),
+        };
+        await updateProduct(productId, productData);
         toast.success("Product updated successfully!");
       }
 
@@ -301,17 +324,20 @@ export default function ProductForm({
     error,
     disableBefore,
   }: {
-    field: any;
+    field: {
+      value: Date | string | undefined;
+      onChange: (value: Date | string | undefined) => void;
+    };
     label: string;
     required?: boolean;
     error?: string;
     disableBefore?: string | Date;
   }) => {
-    const getValue = () => {
+    const getValue = (): Date | undefined => {
       if (mode === "add") {
-        return field.value;
+        return field.value as Date | undefined;
       } else {
-        return field.value ? stringToDate(field.value) : undefined;
+        return field.value ? stringToDate(field.value as string) : undefined;
       }
     };
 
@@ -330,7 +356,7 @@ export default function ProductForm({
             ? disableBefore
             : typeof disableBefore === "string"
               ? stringToDate(disableBefore)
-              : disableBefore;
+              : disableBefore as Date;
         return date < beforeDate;
       }
       return false;

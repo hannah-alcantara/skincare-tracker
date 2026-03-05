@@ -22,7 +22,7 @@ export async function createProduct(productData: Omit<Product, "id">) {
     .single();
 
   if (error) {
-    throw new Error(`Failed to fetch products: ${error.message}`);
+    throw new Error(`Failed to create product: ${error.message}`);
   }
 
   return data;

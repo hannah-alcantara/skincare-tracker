@@ -7,6 +7,8 @@ import { Product } from "@/utils/supabase/types";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import ProductForm from "@/components/product-form";
+import { LoadingPage } from "@/components/loading-page";
+import { AlertTriangle } from "lucide-react";
 
 
 export default function EditProductPage() {
@@ -38,28 +40,20 @@ export default function EditProductPage() {
   }, [productId]);
 
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='text-center'>
-          <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto'></div>
-          <p className='mt-2 text-gray-600'>Loading product...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingPage variant="products" message="Loading product" />;
 
-  // Error state
   if (error || !product) {
     return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='text-center'>
-          <p className='text-red-600'>Error: {error || "Product not found"}</p>
-          <Button onClick={() => router.push("/products")} className='mt-4'>
-            Back to Products
-          </Button>
-        </div>
+      <div className='flex items-center justify-center min-h-[60vh]'>
+        <Card className='w-full max-w-md text-center'>
+          <CardContent className='pt-6 space-y-4'>
+            <AlertTriangle className='h-10 w-10 text-destructive mx-auto' />
+            <p className='text-muted-foreground'>{error || "Product not found"}</p>
+            <Button onClick={() => router.push("/products")}>
+              Back to Products
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }

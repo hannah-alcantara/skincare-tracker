@@ -20,6 +20,7 @@ import ProductCard from "@/components/product-card";
 import { isProductFinished, getProductStatus, sortProductsByExpiration } from "@/lib/date-utils";
 import { useMemo } from "react";
 import { LoadingPage } from "@/components/loading-page";
+import { toast } from "sonner";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -135,7 +136,7 @@ export default function ProductsPage() {
       );
     } catch (error) {
       console.error('Failed to delete product:', error);
-      // Handle error (show toast, etc.)
+      toast.error("Failed to delete product. Please try again.");
     }
   };
 

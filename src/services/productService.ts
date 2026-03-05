@@ -3,9 +3,24 @@ import { Product } from "@/utils/supabase/types";
 
 const supabase = createClient();
 
-// Simple function to test fetching products
+async function getAuthenticatedUser() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user) {
+    throw new Error("You must be signed in to perform this action.");
+  }
+  return user;
+}
+
 export async function getProducts() {
-  const { data, error } = await supabase.from("products").select("*");
+  const user = await getAuthenticatedUser();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("user_id", user.id);
 
   if (error) {
     throw new Error(`Failed to fetch products: ${error.message}`);
@@ -14,10 +29,14 @@ export async function getProducts() {
   return data;
 }
 
-export async function createProduct(productData: Omit<Product, "id">) {
+export async function createProduct(
+  productData: Omit<Product, "id" | "user_id">
+) {
+  const user = await getAuthenticatedUser();
+
   const { data, error } = await supabase
     .from("products")
-    .insert([productData])
+    .insert([{ ...productData, user_id: user.id }])
     .select()
     .single();
 
@@ -29,10 +48,13 @@ export async function createProduct(productData: Omit<Product, "id">) {
 }
 
 export async function deleteProduct(productId: string) {
+  const user = await getAuthenticatedUser();
+
   const { data, error } = await supabase
     .from("products")
     .delete()
     .eq("id", productId)
+    .eq("user_id", user.id)
     .select();
 
   if (error) {
@@ -43,10 +65,13 @@ export async function deleteProduct(productId: string) {
 }
 
 export async function getProductById(productId: string) {
+  const user = await getAuthenticatedUser();
+
   const { data, error } = await supabase
     .from("products")
     .select("*")
     .eq("id", productId)
+    .eq("user_id", user.id)
     .single();
 
   if (error) {
@@ -60,10 +85,13 @@ export async function updateProduct(
   productId: string,
   updates: Partial<Product>
 ) {
+  const user = await getAuthenticatedUser();
+
   const { data, error } = await supabase
     .from("products")
     .update(updates)
     .eq("id", productId)
+    .eq("user_id", user.id)
     .select()
     .single();
 
